@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
-from src.handlers.riders_handlers import inserisci_rider
+from werkzeug.exceptions import BadRequest  #per riconoscere errori legati alle richieste HTTP (come BadRequest)
+from src.handlers.riders_handlers import inserisci_rider_handlers, list_rider_handlers
 
 riders_bp = Blueprint("riders", __name__, url_prefix="/riders")
 
@@ -7,8 +8,35 @@ riders_bp = Blueprint("riders", __name__, url_prefix="/riders")
 def insert_rider():
     try:
         dati_inseriti = request.get_json()
-        risposta_json, codice_http = inserisci_rider(dati_inseriti)
-        if risposta_json and codice_http:
-            return jsonify(risposta_json), codice_http
+        risposta_json, codice_http = inserisci_rider_handlers(dati_inseriti)
+        return jsonify(risposta_json), codice_http
+    except BadRequest as e:
+        return jsonify({
+            "Errore":"Il formato del JSON inviato non è valido. Controlla la sintassi (virgole, virgolette, graffe, valori variabili).", 
+            "Dettaglio tecnico": str(e)
+            }),400
     except Exception as e:
-        return jsonify({"Errore": str(e)}), 400
+        return jsonify({"Errore Server": str(e)}), 500
+    
+@riders_bp.route('/list_rider', methods=['GET'])
+def list_rider():
+    try:
+        url_originale = request.environ.get('RAW_URI', request.url)
+        if url_originale.endswith('?'):
+            return jsonify({
+                "Errore sintassi URL": 
+                "Hai inserito il punto interrogativo senza specificare alcun filtro. Rimuovi il '?' o usa '?vehicle=nome_veicolo'."
+            }), 400
+        stringa_grezza = request.query_string.decode('utf-8')
+        if stringa_grezza:
+            if stringa_grezza.startswith('=') or 'vehicle=' not in stringa_grezza:
+                return jsonify({
+                    "Errore sintassi URL": 
+                    "Hai formattato male i filtri. Usa il comando completo '?vehicle=nome_veicolo'"
+                }), 400
+        parametro_url = request.args
+        risposta_json, codice_http = list_rider_handlers(parametro_url)
+        return jsonify(risposta_json), codice_http
+    except Exception as e:
+        return jsonify({"Errore Server": str(e)}), 500
+    

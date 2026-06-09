@@ -2,6 +2,15 @@ import os
 import psycopg2
 from flask import jsonify
 
+### UTILS
+
+LISTA_VEICOLI_AMMESSI = ['auto', 'moto', 'scooter', 'bicicletta', 'furgone']
+
+def controllo_veicolo_valido(veicolo):
+    return veicolo in LISTA_VEICOLI_AMMESSI
+
+### UTILS DB
+
 def connessione_db():
     return psycopg2.connect(
         host = os.getenv("DB_HOST", "localhost"),
@@ -56,6 +65,7 @@ def inserisci_rider_nel_db(nome, veicolo, consegne_totali):
     try:
         conn_db = connessione_db()
         cursore = conn_db.cursor()
+
         query = """
             INSERT INTO riders (name, vehicle, total_deliveries)
             VALUES (%s, %s, %s)
@@ -72,3 +82,127 @@ def inserisci_rider_nel_db(nome, veicolo, consegne_totali):
     finally:
         if conn_db is not None:
             conn_db.close()
+
+def list_rider_db():
+    conn_db = None
+    try:
+        conn_db = connessione_db()
+        cursore = conn_db.cursor()
+
+        query = """
+            SELECT r.id, r.name, r.vehicle, r.total_deliveries,
+                COALESCE(ROUND(AVG(rev.rating), 1), 0.0), COUNT(rev.id)
+            FROM riders r
+            LEFT JOIN reviews rev ON r.id = rev.rider_id
+            GROUP BY r.id
+            ORDER BY r.id;
+        """
+
+        cursore.execute(query)
+        risultato = cursore.fetchall()
+        cursore.close()
+        return risultato
+    except (Exception, psycopg2.DatabaseError) as e:
+        raise Exception(f"Errore database: {e}")
+    finally:
+        if conn_db is not None:
+            conn_db.close()
+
+def list_rider_filtrata_db(veicolo_da_filtrare):
+    conn_db = None
+    try:
+        conn_db = connessione_db()
+        cursore = conn_db.cursor()
+
+        query = """
+            SELECT r.id, r.name, r.vehicle, r.total_deliveries,
+               COALESCE(ROUND(AVG(rev.rating), 1), 0.0), COUNT(rev.id)
+            FROM riders r
+            LEFT JOIN reviews rev ON r.id = rev.rider_id
+            WHERE LOWER(r.vehicle) = LOWER(%s)
+            GROUP BY r.id
+            ORDER BY r.id;
+        """
+
+        cursore.execute(query, (veicolo_da_filtrare,))
+        risultato = cursore.fetchall()
+        cursore.close()
+        return risultato
+    except (Exception, psycopg2.DatabaseError) as e:
+        raise Exception(f"Errore database: {e}")
+    finally:
+        if conn_db is not None:
+            conn_db.close()
+
+def esegui_reset_db():
+    reset_attivo = os.getenv("ABILITA_RESET_DB", "False").lower() == "true"
+    if not reset_attivo:
+        print("Reset DB non attivo, salto il reset.")
+        return #interrompe la funzione
+    else:
+        conn_db = None
+        try:
+            conn_db = connessione_db()
+            cursore = conn_db.cursor()
+            
+            cursore.execute("TRUNCATE TABLE riders, reviews RESTART IDENTITY CASCADE;")
+
+            riders_fittizi = [
+            ("Michela", "moto", 120),
+            ("Marco", "auto", 45),
+            ("Alessandra", "scooter", 210),
+            ("Francesca", "bicicletta", 80),
+            ("Giorgo", "bicicletta", 10),
+            ("Andrea", "furgone", 23),
+            ("Nicola", "furgone", 3),
+            ("Sara", "moto", 15),
+            ("Paola", "scooter", 74)
+            ]
+
+            riders_id_generati = []
+            for name, vehicle, total_deliveries in riders_fittizi:
+                cursore.execute("""
+                    INSERT INTO riders (name, vehicle, total_deliveries) 
+                    VALUES (%s, %s, %s) RETURNING id;
+                """, (name, vehicle, total_deliveries))
+
+                id_nuovo_rider = cursore.fetchone()[0]
+                riders_id_generati.append(id_nuovo_rider)
+
+            recensioni_fittizie = [
+                (riders_id_generati[0], "Angela", 5, "Super veloce e gentilissimo!"),
+                (riders_id_generati[6], "Gianluca", 4, "Tutto perfetto, cibo ancora caldo."),
+                (riders_id_generati[1], "Roberto", 3, "Consegna un po' in ritardo ma accettabile."),
+                (riders_id_generati[2], "Sofia", 5, "Il miglior rider della zona, consigliatissimo!"),
+                (riders_id_generati[3], "Luca", 2, "La pizza era un po' fredda purtroppo."),
+                (riders_id_generati[1], "Elena", 5, "Puntuale e super professionale, consigliato!"),
+                (riders_id_generati[2], "Marco", 4, "Consegna rapida, panino perfetto ed ancora ben caldo."),
+                (riders_id_generati[3], "Davide", 1, "Il rider ha sbagliato strada e il cibo è arrivato in ritardo e freddo."),
+                (riders_id_generati[7], "Chiara", 5, "Consegnato in anticipo con una gentilezza d'altri tempi. Cinque stelle strameritate!"),
+                (riders_id_generati[4], "Stefano", 3, "Consegna nella norma, senza lodi e senza infamia."),
+                (riders_id_generati[5], "Alessia", 5, "Ottimo servizio, il furgone garantisce che le vaschette grandi arrivino intatte."),
+                (riders_id_generati[8], "Fabio", 2, "Ha faticato a trovare il citofono e l'ordine si è leggermente rovesciato nel tragitto.")
+            ]
+
+            for rider_id, customer_name, rating, comment in recensioni_fittizie:
+                cursore.execute("""
+                    INSERT INTO reviews (rider_id, customer_name, rating, comment)
+                    VALUES (%s, %s, %s, %s);
+                """, (rider_id, customer_name, rating, comment))
+
+            conn_db.commit()
+            print("Database resettato e popolato con successo!")
+        
+        except Exception as e:
+            if conn_db:
+                conn_db.rollback()
+                print(f"Errore durante il reset del database: {str(e)}")
+        finally:
+            if conn_db:
+                cursore.close()
+                conn_db.close()
+                
+
+
+
+
