@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import BadRequest  #per riconoscere errori legati alle richieste HTTP (come BadRequest)
-from src.handlers.riders_handlers import inserisci_rider_handlers, list_rider_handlers
+from src.handlers.riders_handlers import inserisci_rider_handlers, list_rider_handlers, inserisci_recensione_handlers
 
 riders_bp = Blueprint("riders", __name__, url_prefix="/riders")
 
@@ -40,3 +40,30 @@ def list_rider():
     except Exception as e:
         return jsonify({"Errore Server": str(e)}), 500
     
+@riders_bp.route('/insert_review', methods=['POST'])
+def insert_review():
+    try:
+        dati_inseriti = request.get_json()
+        risposta_json, codice_http = inserisci_recensione_handlers(dati_inseriti)
+        return jsonify(risposta_json), codice_http
+    except BadRequest as e:
+        return jsonify({
+            "Errore":"Il formato del JSON inviato non è valido. Controlla la sintassi (virgole, virgolette, graffe, valori variabili).", 
+            "Dettaglio tecnico": str(e)
+            }),400
+    except Exception as e:
+        return jsonify({"Errore Server": str(e)}), 500
+
+@riders_bp.route('/update_review', methods=['POST'])
+def update_review():
+    try:
+        dati_inseriti = request.get_json()
+        risposta_json, codice_http = aggiorna_recensione_handlers(dati_inseriti)
+        return jsonify(risposta_json), codice_http
+    except BadRequest as e:
+        return jsonify({
+            "Errore":"Il formato del JSON inviato non è valido. Controlla la sintassi (virgole, virgolette, graffe, valori variabili).", 
+            "Dettaglio tecnico": str(e)
+            }),400
+    except Exception as e:
+        return jsonify({"Errore Server": str(e)}), 500

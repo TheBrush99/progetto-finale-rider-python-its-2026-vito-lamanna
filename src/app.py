@@ -1,6 +1,6 @@
 from flask import Flask
 from src.routes import riders_bp
-from src.utils import inizializza_db, esegui_reset_db
+from src.postgres.postgres_handlers import inizializza_db, esegui_reset_db
 import sys
 
 def create_app():

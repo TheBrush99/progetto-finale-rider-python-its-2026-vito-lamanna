@@ -1,5 +1,7 @@
 import os
-from src.utils import inserisci_rider_nel_db, controllo_veicolo_valido, LISTA_VEICOLI_AMMESSI, list_rider_db, list_rider_filtrata_db
+from src.utils import controllo_veicolo_valido
+from src.utils import LISTA_VEICOLI_AMMESSI
+from src.postgres.postgres_handlers import inserisci_rider_nel_db, list_rider_db, list_rider_filtrata_db, controllo_id_rider_in_db, inserisci_recensione_db
 
 def inserisci_rider_handlers(dati_inseriti):
     try:
@@ -68,3 +70,45 @@ def list_rider_handlers(parametro_url):
         return risposta, 200
     except Exception as e:
         return {"Errore Server nell'handler della GET": str(e)}, 500
+
+def inserisci_recensione_handlers(dati_inseriti):
+    try:
+        if not dati_inseriti:
+            return {"Errore":"Il body della richiesta è vuoto, inserisci i dati del driver."}, 400
+        rider_id = dati_inseriti.get('rider_id')
+        customer_name = dati_inseriti.get('customer_name')
+        rating = dati_inseriti.get('rating')
+        comment = dati_inseriti.get('comment', None)
+        if not rider_id or not customer_name or not rating:
+            return {"Errore":"I campi 'rider_id', 'customer_name' e 'rating' sono obbligatori."}, 400
+        if not isinstance(rider_id, int):
+              raise ValueError("Il campo 'rider_id' deve essere un numero intero.")
+        if not controllo_id_rider_in_db(rider_id):
+            return {
+                  "Errore validazione dati": f"L'id del rider inserito '{rider_id}' non è presente nelò DB."
+              }, 400
+        if not (isinstance(rating, int) and 1<= rating <=5):
+              raise ValueError("Il campo 'rating' deve essere un numero intero compreso tra 1 e 5.") 
+        if not isinstance(customer_name, str):
+            return {
+                  "Errore validazione dati": "Il customer_name deve essere una stringa."
+              }, 400
+        id_generato = inserisci_recensione_db(rider_id, customer_name, rating, comment)
+        risposta = {
+            "Messaggio":"Recensione creata con successo!",
+            "Recensione":{
+                "id": id_generato,
+                "rider_id": rider_id,
+                "customer_name": customer_name,
+                "rating": rating,
+                "comment": comment
+            }
+        }
+        return risposta, 201
+    except ValueError as e:
+        return {"Errore validazione dati": str(e)}, 400
+    except Exception as e:
+        return {"Errore Server": str(e)}, 500
+    
+def aggiorna_recensione_handlers(dati_inseriti):
+    pass
