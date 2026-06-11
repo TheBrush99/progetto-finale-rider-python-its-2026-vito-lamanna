@@ -285,3 +285,27 @@ def controllo_id_review_in_db(id_review):
     finally:
         if conn_db is not None:
             conn_db.close()
+
+def cancella_rider_e_recensioni_db(rider_id):
+    conn_db = None
+    try:
+        conn_db = connessione_db()
+        cursore = conn_db.cursor()
+
+        cursore.execute("""
+                    DELETE FROM riders
+                    WHERE id = %s
+                """, (rider_id,))
+
+        righe_cancellate = cursore.rowcount
+        conn_db.commit()
+        cursore.close()
+        if righe_cancellate>0:
+            return True
+        else:
+            return False
+    except (Exception, psycopg2.DatabaseError) as e:
+        raise Exception(f"Errore database: {e}")
+    finally:
+        if conn_db is not None:
+            conn_db.close()

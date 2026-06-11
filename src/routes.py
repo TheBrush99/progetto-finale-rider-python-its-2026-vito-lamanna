@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from werkzeug.exceptions import BadRequest  #per riconoscere errori legati alle richieste HTTP (come BadRequest)
-from src.handlers.riders_handlers import inserisci_rider_handlers, list_rider_handlers, inserisci_recensione_handlers, aggiorna_recensione_handlers
+from src.handlers.riders_handlers import inserisci_rider_handlers, list_rider_handlers, inserisci_recensione_handlers, aggiorna_recensione_handlers, delete_rider_handlers
 
 riders_bp = Blueprint("riders", __name__, url_prefix="/riders")
 
@@ -17,7 +17,8 @@ def insert_rider():
             }),400
     except Exception as e:
         return jsonify({"Errore Server": str(e)}), 500
-    
+
+#query parameters
 @riders_bp.route('/list_rider', methods=['GET'])
 def list_rider():
     try:
@@ -69,5 +70,14 @@ def update_review():
             }),400
     except ValueError as e:
         return jsonify({"Errore": str(e)}), 400
+    except Exception as e:
+        return jsonify({"Errore Server": str(e)}), 500
+
+#path parameters
+@riders_bp.route('/delete_rider/<int:rider_id>', methods=['DELETE'])
+def delete_rider(rider_id):
+    try:
+        risposta_json, codice_http = delete_rider_handlers(rider_id)
+        return jsonify(risposta_json), codice_http
     except Exception as e:
         return jsonify({"Errore Server": str(e)}), 500

@@ -1,7 +1,7 @@
 import os
 from src.utils import controllo_veicolo_valido
 from src.utils import LISTA_VEICOLI_AMMESSI
-from src.postgres.postgres_handlers import inserisci_rider_nel_db, list_rider_db, list_rider_filtrata_db, controllo_id_rider_in_db, inserisci_recensione_db, aggiorna_recensione_db, controllo_id_review_in_db
+from src.postgres.postgres_handlers import inserisci_rider_nel_db, list_rider_db, list_rider_filtrata_db, controllo_id_rider_in_db, inserisci_recensione_db, aggiorna_recensione_db, controllo_id_review_in_db, cancella_rider_e_recensioni_db
 
 def inserisci_rider_handlers(dati_inseriti):
     try:
@@ -135,5 +135,22 @@ def aggiorna_recensione_handlers(dati_inseriti):
         return risposta, 201
     except ValueError as e:
         return {"Errore validazione dati": str(e)}, 400
+    except Exception as e:
+        return {"Errore Server": str(e)}, 500
+    
+def delete_rider_handlers(rider_id):
+    try:
+        if not controllo_id_rider_in_db(rider_id):
+            return {
+                  "Errore validazione dati": f"L'id del rider inserito '{rider_id}' non è presente nel DB."
+              }, 400
+        cancellato = cancella_rider_e_recensioni_db(rider_id)
+        if not cancellato:
+            return {"Errore": "Impossibile eliminare il rider."}, 500
+        else:
+            risposta = {
+                "Messaggio":f"Il rider con id {rider_id} è stato cancellato con successo!"
+            }
+            return risposta, 200
     except Exception as e:
         return {"Errore Server": str(e)}, 500
