@@ -219,3 +219,5 @@ __marimo__/
 
 # File Mac
 .DS_Store
+
+.vscode/
