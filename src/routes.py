@@ -29,19 +29,6 @@ def insert_rider():
 @riders_bp.route('/list_rider', methods=['GET'])
 def list_rider():
     try:
-        url_originale = request.environ.get('RAW_URI', request.url)
-        if url_originale.endswith('?'):
-            return jsonify({
-                "Errore sintassi URL": 
-                "Hai inserito il punto interrogativo senza specificare alcun filtro. Rimuovi il '?' o usa '?vehicle=nome_veicolo'."
-            }), 400
-        stringa_grezza = request.query_string.decode('utf-8')
-        if stringa_grezza:
-            if stringa_grezza.startswith('=') or 'vehicle=' not in stringa_grezza:
-                return jsonify({
-                    "Errore sintassi URL": 
-                    "Hai formattato male i filtri. Usa il comando completo '?vehicle=nome_veicolo'"
-                }), 400
         parametro_url = request.args
         risposta_json, codice_http = list_rider_handlers(parametro_url)
         return jsonify(risposta_json), codice_http
