@@ -28,6 +28,7 @@ services:
       - DB_PASSWORD=latua_password_segreta
       - DB_NAME=postgres
       - ABILITA_RESET_DB=true
+      - LISTA_VEICOLI_AMMESSI=auto,moto,scooter,bicicletta,furgone
     depends_on:
       db:
         condition: service_healthy
