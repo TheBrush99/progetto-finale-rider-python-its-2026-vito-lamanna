@@ -27,6 +27,7 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=latua_password_segreta
       - DB_NAME=postgres
+      - ABILITA_RESET_DB=true
     depends_on:
       db:
         condition: service_healthy
